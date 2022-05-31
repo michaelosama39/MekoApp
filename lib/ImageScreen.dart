@@ -28,7 +28,7 @@ class _ImageScreenState extends State<ImageScreen> {
             onPressed: () {
               setState(() {
                 getImages();
-              })
+              });
             },
           ),
           SizedBox(
