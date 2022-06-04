@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -12,8 +13,9 @@ class ImageScreen extends StatefulWidget {
 
 class _ImageScreenState extends State<ImageScreen> {
   File _image;
-  List<String> listOfImages;
-  List<XFile> _images;
+  List<String> listOfImages = [];
+  String img64;
+  List<Uint8List> listOfImgByte = [];
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +29,17 @@ class _ImageScreenState extends State<ImageScreen> {
             child: Text('Get Image'),
             onPressed: () {
               setState(() {
+                getImage();
+              });
+            },
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          RaisedButton(
+            child: Text('Get Images'),
+            onPressed: () {
+              setState(() {
                 getImages();
               });
             },
@@ -34,27 +47,40 @@ class _ImageScreenState extends State<ImageScreen> {
           SizedBox(
             height: 10,
           ),
-          _image == null ? Container() : Image.file(_image, height: 300),
+          Text('Image'),
+          _image == null ? Container() : Image.file(_image , height: 100 , width: 100),
+          SizedBox(
+            height: 10,
+          ),
+          Text('Images'),
+          Expanded(
+            child: ListView.builder(
+              itemCount: listOfImgByte.length,
+              itemBuilder: (_, index) {
+                return Image.memory(listOfImgByte[index], height: 100 , width: 100);
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
   Future getImages() async {
-    final images = await ImagePicker().pickMultiImage();
-
-    setState(() {
-      if (images != null) {
-        _images.addAll(images);
-      }
-      for(var i in _images) {
-        final bytes = File(i.path).readAsBytesSync();
-        String img64 = base64Encode(bytes);
-        listOfImages.add(img64);
-        print('Image Base64 Is : ${listOfImages}');
-      }
+    ImagePicker image = await ImagePicker().pickMultiImage().then((value) {
+      value.forEach((element) {
+        setState(() {
+          print(element.path);
+          final bytes = File(element.path).readAsBytesSync();
+          listOfImgByte.add(bytes);
+          img64 = base64Encode(bytes);
+          listOfImages.add(img64);
+        });
+      });
     });
+    print('Images Base64 Is : ${listOfImages.length}');
   }
+
   Future getImage() async {
     final image = await ImagePicker().pickImage(source: ImageSource.gallery);
 
@@ -65,6 +91,6 @@ class _ImageScreenState extends State<ImageScreen> {
     });
     final bytes = File(image.path).readAsBytesSync();
     String img64 = base64Encode(bytes);
-    print('Image Base64 Is : ${img64}');
+    print('Image Base64 Is : ${img64.length}');
   }
 }
