@@ -1,21 +1,47 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 import 'dart:typed_data';
+import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_downloader/flutter_downloader.dart';
+import 'package:share_plus/share_plus.dart';
 
-class ImageScreen extends StatefulWidget {
-  const ImageScreen({Key key}) : super(key: key);
+class Home extends StatefulWidget {
+  const Home({Key key}) : super(key: key);
 
   @override
-  State<ImageScreen> createState() => _ImageScreenState();
+  State<Home> createState() => _HomeState();
 }
 
-class _ImageScreenState extends State<ImageScreen> {
+class _HomeState extends State<Home> {
   File _image;
   List<String> listOfImages = [];
   String img64;
   List<Uint8List> listOfImgByte = [];
+  ReceivePort _receivePort = ReceivePort();
+  int progress = 0;
+  File downloadedPDFFile;
+
+  @override
+  void initState() {
+    IsolateNameServer.registerPortWithName(
+        _receivePort.sendPort, 'downloading');
+    _receivePort.listen((message) {
+      setState(() {
+        progress = message[2];
+      });
+      print(progress);
+    });
+    FlutterDownloader.registerCallback((id, status, progress) {
+      SendPort sendPort = IsolateNameServer.lookupPortByName('downloading');
+      sendPort.send([id, status, progress]);
+    });
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +67,29 @@ class _ImageScreenState extends State<ImageScreen> {
             onPressed: () {
               setState(() {
                 getImages();
+              });
+            },
+          ),SizedBox(
+            height: 10,
+          ),
+          RaisedButton(
+            child: Text('Download'),
+            onPressed: () {
+              setState(() {
+                _downloadFile(url: '' , filename: '');
+              });
+            },
+          ),
+          SizedBox(
+            height: 10,
+          ),
+          RaisedButton(
+            child: Text('Share'),
+            onPressed: () {
+              setState(() async{
+                if (downloadedPDFFile != null) {
+                  await Share.shareFiles([downloadedPDFFile.path]);
+                }
               });
             },
           ),
@@ -92,5 +141,23 @@ class _ImageScreenState extends State<ImageScreen> {
     final bytes = File(image.path).readAsBytesSync();
     String img64 = base64Encode(bytes);
     print('Image Base64 Is : ${img64.length}');
+  }
+
+  Future<File> _downloadFile({String url, String filename}) async {
+    var httpClient = new HttpClient();
+    try {
+      var request = await httpClient.getUrl(Uri.parse(url));
+      var response = await request.close();
+      var bytes = await consolidateHttpClientResponseBytes(response);
+      final dir = await getTemporaryDirectory();
+      File file = new File('${dir.path}/$filename.pdf');
+      await file.writeAsBytes(bytes);
+      print('downloaded file path = ${file.path}');
+      downloadedPDFFile = file;
+      return file;
+    } catch (error) {
+      print('pdf downloading error = $error');
+      return File('');
+    }
   }
 }

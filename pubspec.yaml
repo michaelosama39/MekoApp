@@ -27,8 +27,11 @@ environment:
 # the latest version available on pub.dev. To see which dependencies have newer
 # versions available, run `flutter pub outdated`.
 dependencies:
+  flutter_downloader:
+  path_provider: ^1.0.0
+  permission_handler:
+  share_plus: ^2.1.4
   image_picker:
-  image_utils_class: ^2.0.0
   flutter:
     sdk: flutter
 
